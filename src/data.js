@@ -195,11 +195,3 @@ export const education = [
   { school: 'US Aviation Academy', detail: 'Airline / Commercial / Professional Pilot & Flight Crew', dates: '2015 — 2016' },
   { school: 'University of Central Lancashire', detail: 'Diploma — Computer Software Engineering', dates: '2012 — 2015' },
 ];
-
-// Hero terminal lines (typed one after another, loops)
-export const typeLines = [
-  'whoami → full-stack dev · pilot · security analyst',
-  'grep -r "impossible" ./projects → 0 matches',
-  'building AI platforms, giant 3D printers & game servers',
-  'current mission: enterprise AI at 35,000 ft',
-];

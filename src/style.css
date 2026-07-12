@@ -44,32 +44,6 @@ a:focus-visible, button:focus-visible {
 ::-webkit-scrollbar-thumb { background: #16344a; border-radius: 0; }
 ::-webkit-scrollbar-thumb:hover { background: var(--cyan-dim); }
 
-/* ============ BOOT SEQUENCE ============ */
-#boot {
-  position: fixed; inset: 0; z-index: 100;
-  background: #01030a;
-  display: flex; flex-direction: column;
-  justify-content: center; align-items: center;
-  transition: opacity 0.7s ease, visibility 0.7s;
-}
-#boot.done { opacity: 0; visibility: hidden; pointer-events: none; }
-#boot-lines {
-  font-family: var(--mono);
-  color: var(--green);
-  font-size: clamp(11px, 2vw, 15px);
-  line-height: 1.9;
-  text-shadow: 0 0 8px rgba(89, 255, 156, 0.5);
-  white-space: pre;
-}
-#boot-lines .warn { color: var(--amber); }
-#boot-lines .info { color: var(--cyan); }
-#boot-skip {
-  position: absolute; bottom: 28px;
-  color: var(--text-dim); font-size: 11px; letter-spacing: 2px;
-  animation: blink 1.4s step-end infinite;
-}
-@keyframes blink { 50% { opacity: 0.2; } }
-
 /* ============ CANVAS + FALLBACK ============ */
 #scene {
   position: fixed; inset: 0; z-index: 0;
@@ -100,7 +74,6 @@ body.no-webgl #scene-fallback { display: block; }
 .hud-label { color: var(--text-dim); font-size: 10px; letter-spacing: 2px; margin-right: 6px; }
 .hud-value { color: var(--cyan); font-size: 13px; letter-spacing: 1px; text-shadow: 0 0 10px var(--cyan-dim); }
 .hud-unit  { color: var(--text-dim); font-size: 10px; margin-left: 4px; }
-.hud-ok    { color: var(--green); font-size: 11px; letter-spacing: 1px; margin-right: 14px; text-shadow: 0 0 8px rgba(89,255,156,0.4); }
 
 /* heading tape (top center) */
 #hud-heading {
@@ -122,16 +95,8 @@ body.no-webgl #scene-fallback { display: block; }
   background: var(--amber); box-shadow: 0 0 6px var(--amber);
 }
 
-#hud-alt      { position: absolute; top: 50%; left: 18px; transform: translateY(-50%) rotate(0deg); }
-#hud-status   { position: absolute; bottom: 20px; left: 60px; }
+#hud-alt      { position: absolute; top: 50%; left: 18px; transform: translateY(-50%); }
 #hud-waypoint { position: absolute; bottom: 20px; right: 60px; text-align: right; }
-
-/* scanlines - very subtle CRT feel */
-#scanlines {
-  position: absolute; inset: 0;
-  background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.022) 0 1px, transparent 1px 3px);
-  mix-blend-mode: overlay;
-}
 
 /* ============ WAYPOINT NAV ============ */
 #waynav {
@@ -197,7 +162,7 @@ section {
   padding: 40px 30px;
   background: radial-gradient(ellipse 60% 55% at center, rgba(1, 3, 10, 0.62), transparent 75%);
 }
-.hero-pre { color: var(--green); font-size: clamp(11px, 1.6vw, 14px); letter-spacing: 3px; margin-bottom: 18px; }
+.hero-pre { color: var(--text-dim); font-size: clamp(11px, 1.6vw, 14px); letter-spacing: 4px; margin-bottom: 18px; }
 #hero h1 {
   font-family: var(--display); font-weight: 700;
   font-size: clamp(64px, 14vw, 150px);
@@ -214,8 +179,7 @@ section {
 }
 .role-chip.amber { color: var(--amber); border-color: rgba(255, 180, 84, 0.4); background: rgba(255, 180, 84, 0.08); }
 .role-sep { color: var(--text-dim); font-size: 10px; }
-.hero-type { color: var(--text-dim); font-size: clamp(12px, 1.8vw, 15px); min-height: 1.8em; margin-bottom: 34px; }
-.hero-type .caret { color: var(--green); animation: blink 1s step-end infinite; }
+.hero-type { color: var(--text-dim); font-size: clamp(12px, 1.8vw, 15px); max-width: 620px; margin: 0 auto 34px; }
 
 .btn {
   display: inline-block; text-decoration: none; pointer-events: auto;
@@ -291,7 +255,7 @@ section {
   color: #03131c; background: var(--cyan); border-color: var(--cyan);
   box-shadow: 0 0 16px rgba(53, 224, 255, 0.4);
 }
-.msn-tracking { color: var(--green); font-size: 10px; letter-spacing: 2px; text-shadow: 0 0 8px rgba(89, 255, 156, 0.4); }
+.msn-tracking { color: var(--text-dim); font-size: 10px; letter-spacing: 2px; }
 
 .mission-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); grid-auto-flow: dense; gap: 18px; }
 .mission {
@@ -377,8 +341,7 @@ section {
 }
 
 /* ============ SKILLS ============ */
-.skills-flex { display: grid; grid-template-columns: 1.7fr 1fr; gap: 36px; align-items: start; }
-.skill-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.skill-groups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
 .skill-group h3 {
   font-family: var(--display); font-size: 13px; letter-spacing: 3px;
   color: var(--amber); margin-bottom: 10px;
@@ -391,17 +354,6 @@ section {
   padding: 4px 10px; transition: 0.2s;
 }
 .skill-group li:hover { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 12px rgba(53,224,255,0.2); }
-
-.radar-wrap { text-align: center; }
-#radar { width: min(240px, 100%); }
-.radar-ring { fill: none; stroke: rgba(53, 224, 255, 0.22); stroke-width: 1; }
-#radar-sweep path { fill: rgba(89, 255, 156, 0.16); }
-#radar-sweep { transform-origin: 100px 100px; animation: sweep 4s linear infinite; }
-@keyframes sweep { to { transform: rotate(360deg); } }
-#radar-blips circle { fill: var(--green); }
-#radar-blips circle { animation: blip 4s linear infinite; }
-@keyframes blip { 0%, 12% { opacity: 1; } 60%, 100% { opacity: 0.12; } }
-.radar-label { margin-top: 12px; color: var(--green); font-size: 10px; letter-spacing: 2px; }
 
 /* ============ CERTS + EDU ============ */
 .cert-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-bottom: 34px; }
@@ -427,7 +379,7 @@ section {
 /* ============ CONTACT ============ */
 .contact-panel { text-align: center; }
 .contact-panel .sec-head { justify-content: center; }
-.contact-lead { color: var(--green); font-size: 14px; letter-spacing: 1px; margin-bottom: 30px; line-height: 2; }
+.contact-lead { color: var(--text); font-size: 15px; letter-spacing: 0.5px; margin-bottom: 30px; line-height: 2; }
 .contact-links { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-bottom: 40px; }
 .uplink {
   display: block; text-decoration: none; text-align: left;
@@ -437,8 +389,7 @@ section {
   transition: 0.25s;
 }
 .uplink:hover { background: rgba(53, 224, 255, 0.14); border-color: var(--cyan); box-shadow: 0 0 30px rgba(53, 224, 255, 0.25); transform: translateY(-3px); }
-.uplink-proto { display: block; color: var(--text-dim); font-size: 9px; letter-spacing: 2px; }
-.uplink-name { display: block; font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: 3px; color: var(--cyan); margin: 4px 0; }
+.uplink-name { display: block; font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: 3px; color: var(--cyan); margin: 0 0 4px; }
 .uplink-addr { display: block; color: var(--text-dim); font-size: 11px; letter-spacing: 1px; }
 
 .site-footer {
@@ -450,8 +401,8 @@ section {
 
 /* ============ RESPONSIVE ============ */
 @media (max-width: 900px) {
-  .about-grid, .skills-flex { grid-template-columns: 1fr; }
-  .radar-wrap { order: -1; }
+  .about-grid { grid-template-columns: 1fr; }
+  .skill-groups { grid-template-columns: 1fr 1fr; }
   #hud-alt { left: 10px; }
   #waynav { right: 10px; gap: 14px; }
   #waynav a span { display: none; }
@@ -459,7 +410,7 @@ section {
 @media (max-width: 600px) {
   section { padding: 72px 14px; }
   .skill-groups { grid-template-columns: 1fr; }
-  #hud-status, #hud-waypoint { display: none; }
+  #hud-waypoint { display: none; }
   #hud-alt { top: 46px; left: 16px; transform: none; }
   .hud-corner { width: 20px; height: 20px; }
   .btn { margin: 6px 4px; }

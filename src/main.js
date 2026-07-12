@@ -1,8 +1,8 @@
 // ============================================================
-// NIGHT FLIGHT — boot sequence, HUD telemetry, content render
+// NIGHT FLIGHT — HUD telemetry, content render
 // ============================================================
 import { createScene } from './scene.js';
-import { missions, experience, skillGroups, certs, education, typeLines } from './data.js';
+import { missions, experience, skillGroups, certs, education } from './data.js';
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -34,14 +34,14 @@ document.getElementById('mission-grid').append(el(missions.map((m) => {
         <span class="msn-status ${active ? 'active' : 'complete'}"><i class="dot"></i>${active ? 'ACTIVE' : 'COMPLETE'}</span>
       </span>
     </div>
-    <h3 class="msn-title" data-title="${m.title}">${m.title}</h3>
+    <h3 class="msn-title">${m.title}</h3>
     <div class="msn-meta">${m.dates} · ${m.org}</div>
     <p class="msn-desc">${m.desc}</p>
     <div class="msn-tags">${m.tags.map((t) => `<span>${t}</span>`).join('')}</div>
   </article>`;
 }).join('')));
 
-// ----- mission filters + radar-contact entrance + decrypt hover -----
+// ----- mission filters + staggered entrance -----
 const grid = document.getElementById('mission-grid');
 const cards = [...grid.querySelectorAll('.mission')];
 const tracking = document.getElementById('msn-tracking');
@@ -64,7 +64,7 @@ function applyFilter(cat) {
     c.classList.toggle('filtered-out', !show);
     if (show) visible.push(c);
   }
-  tracking.textContent = `TRACKING: ${visible.length} CONTACT${visible.length === 1 ? '' : 'S'}`;
+  tracking.textContent = `${visible.length} PROJECT${visible.length === 1 ? '' : 'S'}`;
   stagger(visible);
 }
 
@@ -77,38 +77,13 @@ filterBar.addEventListener('click', (e) => {
 });
 
 // first entrance when the grid scrolls into view
-tracking.textContent = `TRACKING: ${cards.length} CONTACTS`;
+tracking.textContent = `${cards.length} PROJECTS`;
 const gridObs = new IntersectionObserver((entries) => {
   if (!entries.some((en) => en.isIntersecting)) return;
   gridObs.disconnect();
   stagger(cards);
 }, { threshold: 0.08 });
 gridObs.observe(grid);
-
-// decrypt scramble on hover
-const GLYPHS = '!<>-_\\/[]{}=+*^?#01';
-grid.addEventListener('mouseover', (e) => {
-  if (reducedMotion) return;
-  const card = e.target.closest?.('.mission');
-  if (!card || card.dataset.decrypting) return;
-  if (card.contains(e.relatedTarget)) return; // only on real card entry
-  const title = card.querySelector('.msn-title');
-  const original = title.dataset.title;
-  card.dataset.decrypting = '1';
-  let step = 0;
-  const total = Math.max(10, original.length + 4);
-  const iv = setInterval(() => {
-    step++;
-    const solved = Math.floor((step / total) * original.length);
-    title.textContent = original.slice(0, solved) +
-      [...original.slice(solved)].map((ch) => (ch === ' ' ? ' ' : GLYPHS[Math.floor(Math.random() * GLYPHS.length)])).join('');
-    if (step >= total) {
-      clearInterval(iv);
-      title.textContent = original;
-      delete card.dataset.decrypting;
-    }
-  }, 28);
-}, true);
 
 document.getElementById('skill-groups').append(el(skillGroups.map((g) => `
   <div class="skill-group">
@@ -130,19 +105,6 @@ document.getElementById('edu-list').append(el(education.map((e) => `
     <span class="edu-dates">${e.dates}</span>
   </li>`).join('')));
 
-// radar blips (decorative)
-const blips = document.getElementById('radar-blips');
-for (let i = 0; i < 7; i++) {
-  const a = Math.random() * Math.PI * 2;
-  const r = 20 + Math.random() * 70;
-  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  c.setAttribute('cx', (100 + Math.cos(a) * r).toFixed(1));
-  c.setAttribute('cy', (100 + Math.sin(a) * r).toFixed(1));
-  c.setAttribute('r', '2.4');
-  c.style.animationDelay = `${(a / (Math.PI * 2)) * 4}s`;
-  blips.appendChild(c);
-}
-
 // heading tape content: two wraps of the compass rose so it can pan
 const tape = document.getElementById('heading-tape');
 const roseLabels = ['<b>N</b>', '03', '06', '<b>E</b>', '12', '15', '<b>S</b>', '21', '24', '<b>W</b>', '30', '33'];
@@ -158,76 +120,6 @@ window.addEventListener('mousemove', (e) => {
   if (!sceneApi) return;
   sceneApi.setMouse((e.clientX / window.innerWidth) * 2 - 1, (e.clientY / window.innerHeight) * 2 - 1);
 }, { passive: true });
-
-// ---------- hero terminal typing ----------
-const typeEl = document.getElementById('typeline');
-let typingStarted = false;
-function startTyping() {
-  if (typingStarted || reducedMotion) {
-    if (reducedMotion) typeEl.textContent = typeLines[0];
-    return;
-  }
-  typingStarted = true;
-  let line = 0, ch = 0, deleting = false;
-  const tick = () => {
-    const text = typeLines[line];
-    if (!deleting) {
-      typeEl.textContent = text.slice(0, ++ch);
-      if (ch === text.length) { deleting = true; setTimeout(tick, 2400); return; }
-      setTimeout(tick, 34 + Math.random() * 40);
-    } else {
-      typeEl.textContent = text.slice(0, --ch);
-      if (ch === 0) { deleting = false; line = (line + 1) % typeLines.length; setTimeout(tick, 420); return; }
-      setTimeout(tick, 14);
-    }
-  };
-  tick();
-}
-
-// ---------- boot sequence ----------
-const BOOT_LINES = [
-  ['TADW FLIGHT SYSTEMS // AVIONICS BOOT v2.6', 'info'],
-  ['> POWER BUS ..................... OK', ''],
-  ['> IMU CALIBRATION ............... OK', ''],
-  ['> NAV DATABASE .................. 12 MISSIONS LOADED', ''],
-  ['> COMMS ......................... LINKEDIN / GITHUB ONLINE', ''],
-  ['> SECURE ENCLAVE ................ VERIFIED', ''],
-  ['> THREAT SCAN ................... 0 CONTACTS', ''],
-  ['> CLEARANCE ..................... GRANTED', 'warn'],
-  ['', ''],
-  ['CLEARED FOR TAKEOFF', 'info'],
-];
-
-const boot = document.getElementById('boot');
-const bootPre = document.getElementById('boot-lines');
-let bootDone = false;
-
-function finishBoot() {
-  if (bootDone) return;
-  bootDone = true;
-  boot.classList.add('done');
-  sessionStorage.setItem('tadw-booted', '1');
-  startTyping();
-}
-
-if (reducedMotion || sessionStorage.getItem('tadw-booted')) {
-  finishBoot();
-} else {
-  let li = 0;
-  const nextLine = () => {
-    if (bootDone) return;
-    if (li >= BOOT_LINES.length) { setTimeout(finishBoot, 380); return; }
-    const [text, cls] = BOOT_LINES[li++];
-    const span = document.createElement('span');
-    if (cls) span.className = cls;
-    span.textContent = text + '\n';
-    bootPre.appendChild(span);
-    setTimeout(nextLine, li === BOOT_LINES.length ? 300 : 60 + Math.random() * 70);
-  };
-  setTimeout(nextLine, 180);
-  window.addEventListener('keydown', finishBoot, { once: true });
-  boot.addEventListener('click', finishBoot, { once: true });
-}
 
 // ---------- reveal on scroll + stat counters ----------
 const revealObs = new IntersectionObserver((entries) => {
@@ -259,7 +151,7 @@ function animateCount(node) {
 const sections = [...document.querySelectorAll('main section')];
 const navLinks = [...document.querySelectorAll('#waynav a')];
 const wptValue = document.getElementById('wpt-value');
-const WPT_NAMES = { hero: 'SPLASH', about: 'FLIGHT PLAN', experience: 'FLIGHT LOG', projects: 'MISSIONS', skills: 'LOADOUT', certs: 'RATINGS', contact: 'COMMS' };
+const WPT_NAMES = { hero: 'HOME', about: 'ABOUT', experience: 'EXPERIENCE', projects: 'PROJECTS', skills: 'SKILLS', certs: 'CERTIFICATIONS', contact: 'CONTACT' };
 
 const sectionObs = new IntersectionObserver((entries) => {
   for (const en of entries) {
@@ -274,7 +166,6 @@ sections.forEach((s) => sectionObs.observe(s));
 
 // ---------- scroll-driven HUD telemetry ----------
 const altValue = document.getElementById('alt-value');
-const footTelemetry = document.getElementById('foot-telemetry');
 const TAPE_SEG = 60; // px per 10 degrees (span width)
 
 let ticking = false;
@@ -295,8 +186,6 @@ function onScroll() {
     const tapeW = 36 * TAPE_SEG;
     const px = -((hdg / 360) * tapeW) + (tape.parentElement.clientWidth / 2) - TAPE_SEG / 2;
     tape.style.transform = `translateX(${px}px)`;
-
-    footTelemetry.textContent = `HDG ${String(Math.round(hdg)).padStart(3, '0')} · GS ${Math.round(320 + p * 120)}`;
 
     sceneApi?.setScroll(p);
   });

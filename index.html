@@ -34,12 +34,6 @@
 </head>
 <body>
 
-  <!-- ====== BOOT SEQUENCE ====== -->
-  <div id="boot" aria-hidden="true">
-    <pre id="boot-lines"></pre>
-    <div id="boot-skip">[ TAP OR PRESS ANY KEY TO SKIP ]</div>
-  </div>
-
   <!-- ====== WEBGL CANVAS (fixed background) ====== -->
   <canvas id="scene" aria-hidden="true"></canvas>
   <div id="scene-fallback" aria-hidden="true"></div>
@@ -62,30 +56,22 @@
       <span class="hud-unit">FT</span>
     </div>
 
-    <div id="hud-status">
-      <span class="hud-label">SYS</span>
-      <span class="hud-ok">NOMINAL</span>
-      <span class="hud-label">SEC</span>
-      <span class="hud-ok">HARDENED</span>
-    </div>
-
     <div id="hud-waypoint">
       <span class="hud-label">WPT</span>
       <span class="hud-value" id="wpt-value">01 // SPLASH</span>
     </div>
 
-    <div id="scanlines"></div>
   </div>
 
   <!-- ====== WAYPOINT NAV ====== -->
   <nav id="waynav" aria-label="Section navigation">
-    <a href="#hero"       data-wpt="01" title="Splash"><i></i><span>SPLASH</span></a>
-    <a href="#about"      data-wpt="02" title="Flight plan"><i></i><span>FLIGHT PLAN</span></a>
-    <a href="#experience" data-wpt="03" title="Flight log"><i></i><span>FLIGHT LOG</span></a>
-    <a href="#projects"   data-wpt="04" title="Missions"><i></i><span>MISSIONS</span></a>
-    <a href="#skills"     data-wpt="05" title="Loadout"><i></i><span>LOADOUT</span></a>
-    <a href="#certs"      data-wpt="06" title="Ratings"><i></i><span>RATINGS</span></a>
-    <a href="#contact"    data-wpt="07" title="Comms"><i></i><span>COMMS</span></a>
+    <a href="#hero"       data-wpt="01" title="Home"><i></i><span>HOME</span></a>
+    <a href="#about"      data-wpt="02" title="About"><i></i><span>ABOUT</span></a>
+    <a href="#experience" data-wpt="03" title="Experience"><i></i><span>EXPERIENCE</span></a>
+    <a href="#projects"   data-wpt="04" title="Projects"><i></i><span>PROJECTS</span></a>
+    <a href="#skills"     data-wpt="05" title="Skills"><i></i><span>SKILLS</span></a>
+    <a href="#certs"      data-wpt="06" title="Certifications"><i></i><span>CERTIFICATIONS</span></a>
+    <a href="#contact"    data-wpt="07" title="Contact"><i></i><span>CONTACT</span></a>
   </nav>
 
   <!-- ====== CONTENT ====== -->
@@ -94,7 +80,7 @@
     <!-- HERO -->
     <section id="hero" class="panel-free">
       <div class="hero-inner">
-        <div class="hero-pre reveal">// INBOUND TRAFFIC — IDENT CONFIRMED</div>
+        <div class="hero-pre reveal">PORTFOLIO / 2026</div>
         <h1 class="reveal">TAD&nbsp;W</h1>
         <div class="hero-roles reveal">
           <span class="role-chip">SOFTWARE DEVELOPER</span>
@@ -103,22 +89,22 @@
           <span class="role-sep">✦</span>
           <span class="role-chip amber">NSA-CERTIFIED CYBERSECURITY</span>
         </div>
-        <p class="hero-type reveal"><span id="typeline"></span><span class="caret">▊</span></p>
+        <p class="hero-type reveal">I design, build, and secure production software — from enterprise AI platforms to game servers and hardware.</p>
         <div class="hero-cta reveal">
-          <a class="btn" href="#projects">VIEW MISSIONS</a>
-          <a class="btn ghost" href="#contact">ESTABLISH UPLINK</a>
+          <a class="btn" href="#projects">VIEW PROJECTS</a>
+          <a class="btn ghost" href="#contact">GET IN TOUCH</a>
         </div>
       </div>
-      <div class="scroll-hint">SCROLL TO BEGIN DESCENT<br />▾</div>
+      <div class="scroll-hint">SCROLL<br />▾</div>
     </section>
 
     <!-- ABOUT -->
     <section id="about">
       <div class="panel reveal">
         <header class="sec-head">
-          <span class="sec-num">SEC/02</span>
-          <h2>FLIGHT PLAN</h2>
-          <span class="sec-tag">// ABOUT</span>
+          <span class="sec-num">02</span>
+          <h2>ABOUT</h2>
+          <span class="sec-tag">// FLIGHT PLAN</span>
         </header>
         <div class="about-grid">
           <div class="about-text">
@@ -131,12 +117,12 @@
           </div>
           <div class="about-stats">
             <div class="stat"><span class="stat-v" data-count="9">0</span><span class="stat-l">YEARS IN TECH</span></div>
-            <div class="stat"><span class="stat-v" data-count="12">0</span><span class="stat-l">MISSIONS LOGGED</span></div>
+            <div class="stat"><span class="stat-v" data-count="12">0</span><span class="stat-l">PROJECTS SHIPPED</span></div>
             <div class="stat"><span class="stat-v" data-count="5">0</span><span class="stat-l">HUMAN LANGUAGES</span></div>
             <div class="stat"><span class="stat-v" data-count="15">0</span><span class="stat-l">PROGRAMMING LANGUAGES</span></div>
           </div>
         </div>
-        <div class="comms-line">COMMS: EN (NATIVE) · SI (NATIVE) · TA (PROFESSIONAL) · ES (LIMITED) · DE (ELEMENTARY)</div>
+        <div class="comms-line">LANGUAGES: EN (NATIVE) · SI (NATIVE) · TA (PROFESSIONAL) · ES (LIMITED) · DE (ELEMENTARY)</div>
       </div>
     </section>
 
@@ -144,9 +130,9 @@
     <section id="experience">
       <div class="panel reveal">
         <header class="sec-head">
-          <span class="sec-num">SEC/03</span>
-          <h2>FLIGHT LOG</h2>
-          <span class="sec-tag">// EXPERIENCE</span>
+          <span class="sec-num">03</span>
+          <h2>EXPERIENCE</h2>
+          <span class="sec-tag">// FLIGHT LOG</span>
         </header>
         <ol id="xp-list" class="xp-list"><!-- rendered from data.js --></ol>
       </div>
@@ -156,9 +142,9 @@
     <section id="projects">
       <div class="panel wide reveal">
         <header class="sec-head">
-          <span class="sec-num">SEC/04</span>
-          <h2>MISSION LOG</h2>
-          <span class="sec-tag">// PROJECTS</span>
+          <span class="sec-num">04</span>
+          <h2>PROJECTS</h2>
+          <span class="sec-tag">// MISSION LOG</span>
         </header>
         <div class="msn-toolbar">
           <div id="msn-filters" class="msn-filters" role="group" aria-label="Filter missions"><!-- rendered from data.js --></div>
@@ -172,27 +158,11 @@
     <section id="skills">
       <div class="panel wide reveal">
         <header class="sec-head">
-          <span class="sec-num">SEC/05</span>
-          <h2>LOADOUT</h2>
-          <span class="sec-tag">// SKILLS</span>
+          <span class="sec-num">05</span>
+          <h2>SKILLS</h2>
+          <span class="sec-tag">// STACK</span>
         </header>
-        <div class="skills-flex">
-          <div id="skill-groups" class="skill-groups"><!-- rendered from data.js --></div>
-          <div class="radar-wrap" aria-hidden="true">
-            <svg id="radar" viewBox="0 0 200 200">
-              <circle cx="100" cy="100" r="96" class="radar-ring" />
-              <circle cx="100" cy="100" r="64" class="radar-ring" />
-              <circle cx="100" cy="100" r="32" class="radar-ring" />
-              <line x1="100" y1="4" x2="100" y2="196" class="radar-ring" />
-              <line x1="4" y1="100" x2="196" y2="100" class="radar-ring" />
-              <g id="radar-blips"></g>
-              <g id="radar-sweep">
-                <path d="M100,100 L100,4 A96,96 0 0,1 148,17 Z" />
-              </g>
-            </svg>
-            <div class="radar-label">THREAT SCAN: 0 CONTACTS</div>
-          </div>
-        </div>
+        <div id="skill-groups" class="skill-groups"><!-- rendered from data.js --></div>
       </div>
     </section>
 
@@ -200,13 +170,13 @@
     <section id="certs">
       <div class="panel reveal">
         <header class="sec-head">
-          <span class="sec-num">SEC/06</span>
-          <h2>RATINGS &amp; CERTIFICATIONS</h2>
-          <span class="sec-tag">// CERTS</span>
+          <span class="sec-num">06</span>
+          <h2>CERTIFICATIONS</h2>
+          <span class="sec-tag">// RATINGS</span>
         </header>
         <div id="cert-grid" class="cert-grid"><!-- rendered from data.js --></div>
         <div class="edu-block">
-          <h3 class="sub-head">GROUND SCHOOL // EDUCATION</h3>
+          <h3 class="sub-head">EDUCATION</h3>
           <ul id="edu-list" class="edu-list"><!-- rendered from data.js --></ul>
         </div>
       </div>
@@ -216,19 +186,17 @@
     <section id="contact">
       <div class="panel reveal contact-panel">
         <header class="sec-head">
-          <span class="sec-num">SEC/07</span>
-          <h2>TOWER — COMMS</h2>
-          <span class="sec-tag">// CONTACT</span>
+          <span class="sec-num">07</span>
+          <h2>CONTACT</h2>
+          <span class="sec-tag">// COMMS</span>
         </header>
-        <p class="contact-lead">&gt; TOUCHDOWN. GEAR DOWN AND LOCKED.<br />&gt; OPEN A CHANNEL:</p>
+        <p class="contact-lead">Open to new opportunities, collaborations, and interesting problems.</p>
         <div class="contact-links">
           <a class="uplink" href="https://www.linkedin.com/in/tadw" target="_blank" rel="noopener noreferrer">
-            <span class="uplink-proto">FREQ 121.5 //</span>
             <span class="uplink-name">LINKEDIN</span>
             <span class="uplink-addr">linkedin.com/in/tadw</span>
           </a>
           <a class="uplink" href="https://github.com/TadJ9999" target="_blank" rel="noopener noreferrer">
-            <span class="uplink-proto">FREQ 122.8 //</span>
             <span class="uplink-name">GITHUB</span>
             <span class="uplink-addr">github.com/TadJ9999</span>
           </a>
@@ -236,9 +204,7 @@
         <footer class="site-footer">
           <span>© 2026 TAD W</span>
           <span class="foot-sep">|</span>
-          <span>BUILT WITH THREE.JS · WEBGL · CAFFEINE</span>
-          <span class="foot-sep">|</span>
-          <span id="foot-telemetry">HDG 000 · GS 000</span>
+          <span>BUILT WITH THREE.JS + VITE</span>
         </footer>
       </div>
     </section>
