@@ -57,8 +57,8 @@ void main() {
 
   // cursor ripple: a soft bump that lifts the terrain toward the pointer
   float md = distance(vec2(pos.x, pos.y), uMouse);
-  float ripple = exp(-md * md / 900.0) * uMouseAmp;
-  elev += ripple * 14.0;
+  float ripple = exp(-md * md / 1100.0) * uMouseAmp;
+  elev += ripple * 5.0;
   vGlow = ripple;
 
   pos.z += elev;
@@ -79,9 +79,9 @@ varying float vGlow;
 void main() {
   float h = clamp(vElev / 42.0, 0.0, 1.0);
   vec3 col = mix(uColLow, uColHigh, h);
-  col = mix(col, uColGlow, clamp(vGlow * 1.6, 0.0, 1.0));
+  col = mix(col, uColGlow, clamp(vGlow * 0.6, 0.0, 1.0));
   float fade = 1.0 - smoothstep(260.0, 560.0, vDist);
-  gl_FragColor = vec4(col, fade * (0.85 + vGlow));
+  gl_FragColor = vec4(col, fade * (0.85 + vGlow * 0.35));
 }
 `;
 
@@ -232,7 +232,7 @@ export function createScene(canvas, { reducedMotion = false } = {}) {
   const cursorGlow = new THREE.Sprite(new THREE.SpriteMaterial({
     map: cursorTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0,
   }));
-  cursorGlow.scale.set(60, 60, 1);
+  cursorGlow.scale.set(38, 38, 1);
   scene.add(cursorGlow);
 
   // --- waypoint beacons flying past ---
@@ -309,7 +309,7 @@ export function createScene(canvas, { reducedMotion = false } = {}) {
     }
     const wantAmp = reducedMotion ? 0 : 1;
     uniforms.uMouseAmp.value = damp(uniforms.uMouseAmp.value, wantAmp, 3, dt);
-    cursorGlow.material.opacity = damp(cursorGlow.material.opacity, intro * 0.9, 4, dt);
+    cursorGlow.material.opacity = damp(cursorGlow.material.opacity, intro * 0.28, 4, dt);
 
     // ---- camera choreography ----
     // intro fly-in: start high, far back, banked; settle to rest
