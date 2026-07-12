@@ -25,7 +25,7 @@ document.getElementById('xp-list').append(el(experience.map((x) => `
 document.getElementById('mission-grid').append(el(missions.map((m) => {
   const active = /PRESENT$/.test(m.dates);
   return `
-  <article class="mission" data-cat="${m.cat}">
+  <article class="mission${m.featured ? ' featured' : ''}" data-cat="${m.cat}">
     <div class="msn-scan"></div>
     <div class="msn-top">
       <span class="msn-code">${m.code}</span>
@@ -216,15 +216,15 @@ if (reducedMotion || sessionStorage.getItem('tadw-booted')) {
   let li = 0;
   const nextLine = () => {
     if (bootDone) return;
-    if (li >= BOOT_LINES.length) { setTimeout(finishBoot, 650); return; }
+    if (li >= BOOT_LINES.length) { setTimeout(finishBoot, 380); return; }
     const [text, cls] = BOOT_LINES[li++];
     const span = document.createElement('span');
     if (cls) span.className = cls;
     span.textContent = text + '\n';
     bootPre.appendChild(span);
-    setTimeout(nextLine, li === BOOT_LINES.length ? 500 : 130 + Math.random() * 140);
+    setTimeout(nextLine, li === BOOT_LINES.length ? 300 : 60 + Math.random() * 70);
   };
-  setTimeout(nextLine, 350);
+  setTimeout(nextLine, 180);
   window.addEventListener('keydown', finishBoot, { once: true });
   boot.addEventListener('click', finishBoot, { once: true });
 }
