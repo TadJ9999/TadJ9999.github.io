@@ -1,10 +1,17 @@
 // ============================================================
-// NIGHT FLIGHT — HUD telemetry, content render
+// NIGHT FLIGHT v2 — motion layer, HUD telemetry, content render
 // ============================================================
 import { createScene } from './scene.js';
 import { missions, experience, skillGroups, certs, education } from './data.js';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import Lenis from 'lenis';
 
+gsap.registerPlugin(ScrollTrigger);
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// GSAP owns reveals when motion is on — neutralize the CSS reveal hiding so
+// gsap.from() doesn't read an already-hidden element as its end state.
+if (!reducedMotion) document.documentElement.classList.add('js-motion');
 
 // ---------- render content from data ----------
 function el(html) {
@@ -119,7 +126,86 @@ if (!sceneApi) document.body.classList.add('no-webgl');
 window.addEventListener('mousemove', (e) => {
   if (!sceneApi) return;
   sceneApi.setMouse((e.clientX / window.innerWidth) * 2 - 1, (e.clientY / window.innerHeight) * 2 - 1);
+  sceneApi.setPointer(e.clientX / window.innerWidth, e.clientY / window.innerHeight);
 }, { passive: true });
+
+// playful bank when you click a project card, nav dot, or CTA
+function bankFromEvent(dir) { sceneApi?.bank(dir); }
+grid.addEventListener('pointerdown', (e) => {
+  if (!e.target.closest('.mission')) return;
+  const left = e.clientX < window.innerWidth / 2;
+  bankFromEvent(left ? 1 : -1);
+});
+document.querySelectorAll('#waynav a, .hero-cta a').forEach((a, i) => {
+  a.addEventListener('pointerdown', () => bankFromEvent(i % 2 === 0 ? 1 : -1));
+});
+
+// ---------- Lenis smooth scroll, driven by GSAP ticker ----------
+let lenis = null;
+if (!reducedMotion) {
+  lenis = new Lenis({ lerp: 0.09, wheelMultiplier: 1.0, smoothWheel: true });
+  lenis.on('scroll', ScrollTrigger.update);
+  gsap.ticker.add((time) => lenis.raf(time * 1000));
+  gsap.ticker.lagSmoothing(0);
+  // route in-page anchors through Lenis for buttery jumps
+  document.querySelectorAll('a[href^="#"]').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (!target) return;
+      e.preventDefault();
+      lenis.scrollTo(target, { duration: 1.5, easing: (t) => 1 - Math.pow(1 - t, 3) });
+    });
+  });
+}
+
+// ---------- hero title assembly ----------
+const heroTitle = document.querySelector('#hero h1');
+if (heroTitle && !reducedMotion) {
+  const text = heroTitle.textContent;
+  heroTitle.setAttribute('aria-label', text.trim());
+  heroTitle.innerHTML = [...text].map((ch) =>
+    ch === ' ' ? '<span class="ltr-space">&nbsp;</span>'
+               : `<span class="ltr" aria-hidden="true">${ch}</span>`).join('');
+  const letters = heroTitle.querySelectorAll('.ltr');
+  const delay = (sceneApi?.introDuration ?? 0) * 0.45;
+  gsap.set('#hero .hero-inner', { opacity: 1 });   // container on; children animate in
+  gsap.set(letters, { yPercent: 120, opacity: 0, filter: 'blur(14px)', rotateX: -80 });
+  gsap.set('#hero .hero-pre, #hero .hero-roles, #hero .hero-type, #hero .hero-cta, #hero .scroll-hint',
+    { opacity: 0, y: 24 });
+  const tl = gsap.timeline({ delay: delay + 0.2 });
+  tl.to(letters, {
+    yPercent: 0, opacity: 1, filter: 'blur(0px)', rotateX: 0,
+    duration: 1.1, ease: 'power4.out', stagger: 0.09,
+  })
+    .to('#hero .hero-pre', { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out' }, '-=0.9')
+    .to('#hero .hero-roles', { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out' }, '-=0.6')
+    .to('#hero .hero-type', { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out' }, '-=0.5')
+    .to('#hero .hero-cta', { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out' }, '-=0.5')
+    .to('#hero .scroll-hint', { opacity: 1, y: 0, duration: 0.6 }, '-=0.4');
+}
+
+// ---------- cinematic scroll choreography ----------
+if (!reducedMotion) {
+  // hero drifts up and dissolves as you leave it
+  gsap.to('#hero .hero-inner', {
+    yPercent: -18, opacity: 0, ease: 'none',
+    scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: true },
+  });
+  // each panel rises + settles with a subtle parallax as it enters
+  gsap.utils.toArray('main section:not(#hero) .panel').forEach((panel) => {
+    gsap.from(panel, {
+      y: 60, opacity: 0, ease: 'power3.out', duration: 1,
+      scrollTrigger: { trigger: panel, start: 'top 82%', toggleActions: 'play none none reverse' },
+    });
+  });
+
+  // Safety: if the tab loaded in the background, rAF (and thus GSAP/Lenis) is
+  // throttled and reveals can stall mid-tween. Recompute triggers on focus and
+  // after full load so everything resolves to its correct state.
+  const refresh = () => ScrollTrigger.refresh();
+  window.addEventListener('load', refresh);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+}
 
 // ---------- reveal on scroll + stat counters ----------
 const revealObs = new IntersectionObserver((entries) => {

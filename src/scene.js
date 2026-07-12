@@ -1,6 +1,7 @@
 // ============================================================
-// NIGHT FLIGHT scene — wireframe canyon flyover
-// Custom GLSL displacement terrain + stars + moon + beacons + bloom
+// NIGHT FLIGHT v2 — cinematic wireframe canyon flyover
+// Intro hyperspace fly-in · cursor-reactive glow · scroll-flown camera
+// Custom GLSL displacement terrain + streaking stars + moon + beacons + bloom
 // ============================================================
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -35,22 +36,31 @@ float snoise(vec2 v) {
 }
 `;
 
+// Terrain vertex: displaced plane + passes world position and a mouse-glow factor
 const TERRAIN_VERT = /* glsl */ `
 uniform float uScroll;
+uniform vec2  uMouse;      // world-space cursor on the terrain plane
+uniform float uMouseAmp;   // 0..1 strength of cursor influence
 varying float vElev;
 varying float vDist;
+varying float vGlow;
 ${SIMPLEX_2D}
 void main() {
   vec3 pos = position;
-  // plane is built in XY then rotated; here Y maps to world -Z (depth)
   vec2 world = vec2(pos.x, pos.y + uScroll);
   float freq = 0.016;
   float n = snoise(world * freq) * 0.72
           + snoise(world * freq * 2.7) * 0.21
           + snoise(world * freq * 6.1) * 0.07;
-  // flight corridor: flatten the center, raise canyon walls at the sides
   float wall = smoothstep(14.0, 110.0, abs(pos.x));
   float elev = n * 29.0 * (0.18 + 0.82 * wall) + wall * 9.0;
+
+  // cursor ripple: a soft bump that lifts the terrain toward the pointer
+  float md = distance(vec2(pos.x, pos.y), uMouse);
+  float ripple = exp(-md * md / 1100.0) * uMouseAmp;
+  elev += ripple * 5.0;
+  vGlow = ripple;
+
   pos.z += elev;
   vElev = elev;
   vec4 mv = modelViewMatrix * vec4(pos, 1.0);
@@ -62,47 +72,64 @@ void main() {
 const TERRAIN_FRAG_WIRE = /* glsl */ `
 uniform vec3 uColLow;
 uniform vec3 uColHigh;
+uniform vec3 uColGlow;
 varying float vElev;
 varying float vDist;
+varying float vGlow;
 void main() {
   float h = clamp(vElev / 42.0, 0.0, 1.0);
   vec3 col = mix(uColLow, uColHigh, h);
+  col = mix(col, uColGlow, clamp(vGlow * 0.6, 0.0, 1.0));
   float fade = 1.0 - smoothstep(260.0, 560.0, vDist);
-  gl_FragColor = vec4(col, fade * 0.85);
+  gl_FragColor = vec4(col, fade * (0.85 + vGlow * 0.35));
 }
 `;
 
 const TERRAIN_FRAG_SOLID = /* glsl */ `
 varying float vElev;
 varying float vDist;
+varying float vGlow;
 void main() {
   float fade = 1.0 - smoothstep(260.0, 560.0, vDist);
-  gl_FragColor = vec4(vec3(0.008, 0.02, 0.045), fade);
+  vec3 base = vec3(0.008, 0.02, 0.045) + vGlow * vec3(0.05, 0.12, 0.16);
+  gl_FragColor = vec4(base, fade);
 }
 `;
 
+// Stars: point sprites that elongate into warp streaks during the intro
 const STAR_VERT = /* glsl */ `
 attribute float aPhase;
 attribute float aSize;
 uniform float uTime;
+uniform float uStreak;   // 0 = dots, 1 = full hyperspace streak
 varying float vTwinkle;
 void main() {
   vTwinkle = 0.55 + 0.45 * sin(uTime * 1.4 + aPhase);
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
-  gl_PointSize = aSize * (300.0 / -mv.z);
+  gl_PointSize = aSize * (300.0 / -mv.z) * (1.0 + uStreak * 3.0);
   gl_Position = projectionMatrix * mv;
 }
 `;
 
 const STAR_FRAG = /* glsl */ `
+uniform float uStreak;
 varying float vTwinkle;
 void main() {
-  float d = length(gl_PointCoord - 0.5);
+  vec2 c = gl_PointCoord - 0.5;
+  // squash vertically so the round dot becomes a vertical streak under warp
+  c.y /= (1.0 + uStreak * 7.0);
+  float d = length(c);
   if (d > 0.5) discard;
   float a = smoothstep(0.5, 0.05, d) * vTwinkle;
-  gl_FragColor = vec4(0.78, 0.92, 1.0, a);
+  vec3 col = mix(vec3(0.78, 0.92, 1.0), vec3(0.75, 0.86, 1.0), uStreak);
+  gl_FragColor = vec4(col, a * (1.0 - uStreak * 0.15));
 }
 `;
+
+// easing helpers
+const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+const easeInOutSine = (t) => -(Math.cos(Math.PI * t) - 1) / 2;
+const damp = (cur, target, lambda, dt) => cur + (target - cur) * (1 - Math.exp(-lambda * dt));
 
 export function createScene(canvas, { reducedMotion = false } = {}) {
   let renderer;
@@ -118,36 +145,33 @@ export function createScene(canvas, { reducedMotion = false } = {}) {
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x01030a);
+  scene.fog = new THREE.FogExp2(0x01030a, 0.0016);
 
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1400);
-  camera.position.set(0, 33, 46);
+  const REST_POS = new THREE.Vector3(0, 33, 46);
+  camera.position.copy(REST_POS);
 
-  // --- terrain: solid black underlay + glowing wireframe on top ---
+  // --- terrain: solid underlay + glowing wireframe ---
   const segX = isMobile ? 90 : 140;
   const segY = isMobile ? 130 : 200;
   const geo = new THREE.PlaneGeometry(460, 640, segX, segY);
 
   const uniforms = {
     uScroll: { value: 0 },
+    uMouse: { value: new THREE.Vector2(9999, 9999) },
+    uMouseAmp: { value: 0 },
     uColLow: { value: new THREE.Color(0x0d3350) },
     uColHigh: { value: new THREE.Color(0x35e0ff) },
+    uColGlow: { value: new THREE.Color(0xffb454) },
   };
 
   const solidMat = new THREE.ShaderMaterial({
-    vertexShader: TERRAIN_VERT,
-    fragmentShader: TERRAIN_FRAG_SOLID,
-    uniforms,
-    transparent: true,
-    polygonOffset: true,
-    polygonOffsetFactor: 1,
-    polygonOffsetUnits: 1,
+    vertexShader: TERRAIN_VERT, fragmentShader: TERRAIN_FRAG_SOLID, uniforms,
+    transparent: true, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
   });
   const wireMat = new THREE.ShaderMaterial({
-    vertexShader: TERRAIN_VERT,
-    fragmentShader: TERRAIN_FRAG_WIRE,
-    uniforms,
-    wireframe: true,
-    transparent: true,
+    vertexShader: TERRAIN_VERT, fragmentShader: TERRAIN_FRAG_WIRE, uniforms,
+    wireframe: true, transparent: true,
   });
 
   const terrainSolid = new THREE.Mesh(geo, solidMat);
@@ -159,15 +183,14 @@ export function createScene(canvas, { reducedMotion = false } = {}) {
   }
 
   // --- stars ---
-  const STAR_COUNT = isMobile ? 700 : 1400;
+  const STAR_COUNT = isMobile ? 700 : 1500;
   const starPos = new Float32Array(STAR_COUNT * 3);
   const starPhase = new Float32Array(STAR_COUNT);
   const starSize = new Float32Array(STAR_COUNT);
   for (let i = 0; i < STAR_COUNT; i++) {
-    // dome above the horizon
     const r = 500 + Math.random() * 500;
     const theta = Math.random() * Math.PI * 2;
-    const phi = Math.random() * Math.PI * 0.48; // keep above horizon
+    const phi = Math.random() * Math.PI * 0.48;
     starPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
     starPos[i * 3 + 1] = r * Math.cos(phi) * 0.6 + 20;
     starPos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta) - 200;
@@ -178,36 +201,43 @@ export function createScene(canvas, { reducedMotion = false } = {}) {
   starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
   starGeo.setAttribute('aPhase', new THREE.BufferAttribute(starPhase, 1));
   starGeo.setAttribute('aSize', new THREE.BufferAttribute(starSize, 1));
-  const starUniforms = { uTime: { value: 0 } };
+  const starUniforms = { uTime: { value: 0 }, uStreak: { value: 1 } };
   const starMat = new THREE.ShaderMaterial({
-    vertexShader: STAR_VERT,
-    fragmentShader: STAR_FRAG,
-    uniforms: starUniforms,
-    transparent: true,
-    depthWrite: false,
+    vertexShader: STAR_VERT, fragmentShader: STAR_FRAG, uniforms: starUniforms,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   });
   scene.add(new THREE.Points(starGeo, starMat));
 
-  // --- moon: soft glowing disc sprite ---
-  const moonCanvas = document.createElement('canvas');
-  moonCanvas.width = moonCanvas.height = 256;
-  const mctx = moonCanvas.getContext('2d');
-  const grad = mctx.createRadialGradient(128, 128, 20, 128, 128, 128);
-  grad.addColorStop(0, 'rgba(220, 245, 255, 1)');
-  grad.addColorStop(0.25, 'rgba(150, 220, 250, 0.55)');
-  grad.addColorStop(0.6, 'rgba(80, 170, 220, 0.14)');
-  grad.addColorStop(1, 'rgba(60, 140, 200, 0)');
-  mctx.fillStyle = grad;
-  mctx.fillRect(0, 0, 256, 256);
-  const moonTex = new THREE.CanvasTexture(moonCanvas);
+  // --- moon glow sprite ---
+  const glowTexture = (stops) => {
+    const c = document.createElement('canvas'); c.width = c.height = 256;
+    const g = c.getContext('2d').createRadialGradient(128, 128, 6, 128, 128, 128);
+    for (const [o, col] of stops) g.addColorStop(o, col);
+    const cx = c.getContext('2d'); cx.fillStyle = g; cx.fillRect(0, 0, 256, 256);
+    return new THREE.CanvasTexture(c);
+  };
+  const moonTex = glowTexture([
+    [0, 'rgba(220, 245, 255, 1)'], [0.25, 'rgba(150, 220, 250, 0.55)'],
+    [0.6, 'rgba(80, 170, 220, 0.14)'], [1, 'rgba(60, 140, 200, 0)'],
+  ]);
   const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: moonTex, transparent: true, depthWrite: false }));
   moon.scale.set(140, 140, 1);
   moon.position.set(-380, 265, -650);
   scene.add(moon);
 
+  // --- cursor glow: an additive sprite that chases the pointer in world space ---
+  const cursorTex = glowTexture([
+    [0, 'rgba(120, 230, 255, 0.9)'], [0.35, 'rgba(70, 190, 255, 0.28)'], [1, 'rgba(50, 150, 220, 0)'],
+  ]);
+  const cursorGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: cursorTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0,
+  }));
+  cursorGlow.scale.set(38, 38, 1);
+  scene.add(cursorGlow);
+
   // --- waypoint beacons flying past ---
-  const BEACONS = 6;
-  const SPACING = 110;
+  const BEACONS = 7;
+  const SPACING = 100;
   const beaconGeo = new THREE.OctahedronGeometry(2.2);
   const beacons = [];
   for (let i = 0; i < BEACONS; i++) {
@@ -218,62 +248,92 @@ export function createScene(canvas, { reducedMotion = false } = {}) {
     beacons.push(b);
   }
 
-  // --- post-processing: bloom makes the wireframe glow ---
+  // --- post-processing bloom ---
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.85, 0.65, 0.12
-  );
+  const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.85, 0.65, 0.12);
   composer.addPass(bloom);
 
   // --- state driven from main.js ---
-  let scrollProgress = 0; // 0 at hero, 1 at contact
+  let scrollProgress = 0;
   let mouseX = 0, mouseY = 0;
-  let targetRoll = 0, targetPitch = 0, targetYaw = 0;
+  let mousePx = 0.5, mousePy = 0.5;   // normalized 0..1 screen for cursor glow
+  let bankImpulse = 0;                 // transient bank from clicks
+  const SPEED = reducedMotion ? 0 : 34;
 
-  const SPEED = reducedMotion ? 0 : 34; // world units / sec
+  // intro timeline (skipped under reduced motion)
+  let introT = reducedMotion ? 1 : 0;
+  const INTRO_DUR = 2.6;
+
   const clock = new THREE.Clock();
   let disposed = false;
   const sizeProbe = new THREE.Vector2();
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  const hitPoint = new THREE.Vector3();
+  const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
   function frame() {
     if (disposed) return;
     requestAnimationFrame(frame);
 
-    // self-heal: the page can load in a hidden/zero-size pane where no
-    // resize event ever fires — sync renderer size to the window each frame
     renderer.getSize(sizeProbe);
-    if ((sizeProbe.x !== window.innerWidth || sizeProbe.y !== window.innerHeight) && window.innerWidth > 0) {
-      onResize();
-    }
+    if ((sizeProbe.x !== window.innerWidth || sizeProbe.y !== window.innerHeight) && window.innerWidth > 0) onResize();
 
     const dt = Math.min(clock.getDelta(), 0.05);
     const t = clock.elapsedTime;
 
-    uniforms.uScroll.value += SPEED * dt;
+    // advance intro
+    if (introT < 1) introT = Math.min(1, introT + dt / INTRO_DUR);
+    const intro = easeOutCubic(introT);
+    starUniforms.uStreak.value = (1 - intro) * (1 - intro);       // warp fades fast
+    bloom.strength = 0.85 + (1 - intro) * 1.4;                    // extra bloom during warp
+
+    uniforms.uScroll.value += SPEED * dt * (1 + (1 - intro) * 6); // terrain rushes at start
     starUniforms.uTime.value = t;
 
-    // beacons fly toward the camera and loop
+    // beacons stream toward the camera
     for (const b of beacons) {
-      b.position.z += SPEED * dt;
-      b.rotation.y += dt * 1.2;
-      b.rotation.x += dt * 0.6;
+      b.position.z += SPEED * dt * (1 + (1 - intro) * 4);
+      b.rotation.y += dt * 1.2; b.rotation.x += dt * 0.6;
       if (b.position.z > 40) b.position.z -= BEACONS * SPACING;
     }
 
-    // descend as the page scrolls: 33 -> 15
-    const targetY = 33 - scrollProgress * 18;
-    camera.position.y += (targetY - camera.position.y) * 0.06;
+    // cursor glow: unproject pointer onto the ground plane, chase it
+    ndc.set(mousePx * 2 - 1, -(mousePy * 2 - 1));
+    raycaster.setFromCamera(ndc, camera);
+    if (raycaster.ray.intersectPlane(groundPlane, hitPoint)) {
+      cursorGlow.position.lerp(hitPoint.clone().setY(6), 0.12);
+      // feed cursor world XY into the terrain (accounting for scroll offset)
+      uniforms.uMouse.value.set(hitPoint.x, hitPoint.z + 250 - uniforms.uScroll.value);
+    }
+    const wantAmp = reducedMotion ? 0 : 1;
+    uniforms.uMouseAmp.value = damp(uniforms.uMouseAmp.value, wantAmp, 3, dt);
+    cursorGlow.material.opacity = damp(cursorGlow.material.opacity, intro * 0.28, 4, dt);
 
-    // mouse parallax = gentle banking; nose-up at the top of the page,
-    // pitching down as the descent progresses
-    targetRoll = -mouseX * 0.045;
-    targetYaw = -mouseX * 0.05;
-    targetPitch = 0.14 - scrollProgress * 0.2 - mouseY * 0.035;
-    camera.rotation.z += (targetRoll - camera.rotation.z) * 0.04;
-    camera.rotation.y += (targetYaw - camera.rotation.y) * 0.04;
-    camera.rotation.x += (targetPitch - camera.rotation.x) * 0.04;
+    // ---- camera choreography ----
+    // intro fly-in: start high, far back, banked; settle to rest
+    const introPos = new THREE.Vector3(0, 96, 150);
+    const restY = 33 - scrollProgress * 18;                 // descend as you scroll
+    const baseX = Math.sin(scrollProgress * Math.PI * 2.0) * 10; // gentle S-curve flight path
+    const targetPos = new THREE.Vector3(baseX, restY, 46);
+    camera.position.lerpVectors(introPos, targetPos, intro);
+    // once settled, keep easing toward the live target (scroll can change it after intro)
+    if (introT >= 1) {
+      camera.position.x = damp(camera.position.x, targetPos.x, 3, dt);
+      camera.position.y = damp(camera.position.y, targetPos.y, 3, dt);
+    }
+
+    bankImpulse = damp(bankImpulse, 0, 4, dt);
+
+    // banking: mouse + scroll S-curve + click impulse; nose down as we descend
+    const pathBank = Math.cos(scrollProgress * Math.PI * 2.0) * 0.10;
+    const targetRoll = (-mouseX * 0.05 + pathBank + bankImpulse) * intro;
+    const targetYaw = (-mouseX * 0.05 - baseX * 0.004) * intro;
+    const targetPitch = (0.14 - scrollProgress * 0.2 - mouseY * 0.035) * intro + (1 - intro) * 0.25;
+    camera.rotation.z = damp(camera.rotation.z, targetRoll, 4, dt);
+    camera.rotation.y = damp(camera.rotation.y, targetYaw, 4, dt);
+    camera.rotation.x = damp(camera.rotation.x, targetPitch, 4, dt);
 
     composer.render();
   }
@@ -281,23 +341,21 @@ export function createScene(canvas, { reducedMotion = false } = {}) {
 
   function onResize() {
     const w = window.innerWidth, h = window.innerHeight;
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    renderer.setSize(w, h);
-    composer.setSize(w, h);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+    renderer.setSize(w, h); composer.setSize(w, h);
   }
   window.addEventListener('resize', onResize);
 
   return {
     setScroll(p) { scrollProgress = p; },
     setMouse(x, y) { mouseX = x; mouseY = y; },
+    setPointer(px, py) { mousePx = px; mousePy = py; },
+    bank(dir = 1) { bankImpulse = 0.28 * dir; },   // playful click response
+    introDuration: reducedMotion ? 0 : INTRO_DUR,
     dispose() {
       disposed = true;
       window.removeEventListener('resize', onResize);
-      renderer.dispose();
-      geo.dispose();
-      starGeo.dispose();
-      beaconGeo.dispose();
+      renderer.dispose(); geo.dispose(); starGeo.dispose(); beaconGeo.dispose();
     },
   };
 }
