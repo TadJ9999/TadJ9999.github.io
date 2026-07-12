@@ -21,6 +21,12 @@
 
 html { scroll-behavior: smooth; }
 
+/* Lenis smooth scroll */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -151,9 +157,18 @@ section {
 .sec-tag { color: var(--text-dim); font-size: 12px; letter-spacing: 2px; }
 .sub-head { font-family: var(--display); letter-spacing: 3px; color: var(--cyan); font-size: 15px; margin-bottom: 14px; }
 
-/* reveal on scroll */
+/* reveal on scroll (used when motion is OFF or JS is absent) */
 .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.8s ease, transform 0.8s ease; }
 .reveal.visible { opacity: 1; transform: none; }
+/* when GSAP drives motion, it owns reveals — start visible so gsap.from() reads
+   the correct end state; panels/hero get pre-hidden explicitly below */
+.js-motion .reveal { opacity: 1; transform: none; transition: none; }
+.js-motion #hero .hero-inner { opacity: 0; }         /* pre-hide until title assembly */
+
+/* hero title letter assembly */
+#hero h1 { perspective: 900px; }
+#hero h1 .ltr { display: inline-block; transform-origin: 50% 100%; will-change: transform, opacity, filter; }
+#hero h1 .ltr-space { display: inline-block; }
 
 /* ============ HERO ============ */
 .panel-free { flex-direction: column; text-align: center; position: relative; }
